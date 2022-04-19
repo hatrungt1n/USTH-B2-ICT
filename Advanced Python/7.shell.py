@@ -1,73 +1,101 @@
 import os
-import subprocess
-import shutil
-import time
-
+from colorama import Fore
+import readline
 
 def ls():
-    # get working directory
-    loc = os.getcwd()
-    c = os.listdir(loc)
-    print(c)
+    # get current directory
+    files = os.getcwd()
+    getFiles = os.listdir(files)
+    print('\t'.join(getFiles))
 
 
-def rm(cmd):
-    if (len(cmd) == 2):
-        file = cmd[1]
-        if (file[0] != "/"):
-            dir = os.getcwd()
-            dirname = dir + "/" + file
-            shutil.rmtree(dirname)
-            print("remove " + dirname)
-    else:
-        pass
+def getFileOrFolderName(cmd):
+    names = []
+    name = cmd[1]
+    if len(cmd) > 2:
+        for i in range(1, len(cmd)):
+            names.append(cmd[i])
+        name = f"{' '.join(names)}"
+
+    return name
+
+
+def cat(cmd):
+    with open(getFileOrFolderName(cmd), 'r')as f:
+        data = f.read()
+    print(data)
 
 
 def cd(cmd):
-    loc = cmd[1]
-    os.chdir(loc)
+    path = getFileOrFolderName(cmd)
+    try:
+        os.chdir(path)
+        # print("Current working directory: {0}".format(os.getcwd()))
+    except FileNotFoundError:
+        print("Directory: {0} does not exist".format(path))
+    except NotADirectoryError:
+        print("{0} is not a directory".format(path))
+    except PermissionError:
+        print("You do not have permissions to change to {0}".format(path))
+
+
+def mkdir(cmd):
+    newFolder = getFileOrFolderName(cmd)
+    if os.path.exists(newFolder): 
+        print("Folder has already existed!")
+    else:
+        os.mkdir(newFolder)
+
+
+def rmdir(cmd):
+    folder = getFileOrFolderName(cmd)
+    if (not os.path.exists(folder)): 
+        print("The folder does not exist!")
+    else:
+        os.rmdir(folder)
 
 
 def touch(cmd):
-    path = cmd[1]
-    if (not os.path.exists(path)):
-        open(path, "w")
+    newFile = getFileOrFolderName(cmd)
+    if os.path.exists(newFile): 
+        print("File has already existed!")
+    else:
+        open(newFile, "w")
+
+def remove(cmd):
+    file = getFileOrFolderName(cmd)
+    if (not os.path.exists(file)):
+        print("The file does not exist!")
+    else:
+        os.remove(file)
 
 
-if __name__ == '__main__':
-    while True:
-        command = input("Enter your command line: \n")
-        cmd = command.split(" ")
-        if (cmd[0] == "cat"):
-            fname = cmd[1]
-            with open(fname, 'r')as file:
-                data = file.read()
-            print(data)
-        elif cmd[0] == "ls" and len(cmd) == 1:
-            ls()
-        # elif cmd[0]=="ls" and len(cmd)==2:
-        #     ls2(cmd)
-        elif len(cmd) == 2 and cmd[0] == "cd":
-            cd(cmd)
-        elif cmd[0] == "touch":
-            touch(cmd)
-        # ps -ef | grep firefox
-        elif command.startswith("ps"):
-            cmdd = command.split(" | ")
-            print("cmdd", cmdd)
-            for i in range(len(cmdd)):
-                if i == 0:
-                    ps = subprocess.Popen(cmdd[i].split(" "), stdout=subprocess.PIPE)
-                else:
-                    grep = subprocess.Popen(cmdd[i].split(" "), stdin=ps.stdout, stdout=subprocess.PIPE,
-                                            encoding='utf-8')
-            ps.stdout.close()
-            output, _ = grep.communicate()
-            python_processes = output.split('\n')
-            print(python_processes)
-        # bc a.txt or ls -la a.txt or ls -la
-        elif len(cmd) > 1:
-            print(subprocess.Popen(cmd))
-            time.sleep(1)
+def completer(text, state):
+    options = [i for i in os.listdir(os.getcwd()) if i.startswith(text)]
+    if state < len(options):
+        return options[state]
+    else:
+        return None
 
-            # subprocess.run(cmd)
+readline.parse_and_bind("tab: complete")
+readline.set_completer(completer)
+
+
+while True:
+    directory = os.getcwd()
+    command = input(Fore.RED + directory + ": ")
+    cmd = command.split(" ")
+    if cmd[0] == "cat" and len(cmd) >= 2:
+        cat(cmd)
+    elif cmd[0] == "ls":
+        ls()
+    elif cmd[0] == "cd" and len(cmd) >= 2:
+        cd(cmd)
+    elif cmd[0] == "touch" and len(cmd) >= 2:
+        touch(cmd)
+    elif cmd[0] == "rm" and len(cmd) >= 2:
+        remove(cmd)
+    elif cmd[0] == "mkdir" and len(cmd) >= 2:
+        mkdir(cmd)
+    elif cmd[0] == "rmdir" and len(cmd) >= 2:
+        rmdir(cmd)
